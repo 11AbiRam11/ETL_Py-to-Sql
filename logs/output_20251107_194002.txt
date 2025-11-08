@@ -1,0 +1,8 @@
+
+Traceback (most recent call last):
+  File "/app/ETL/Load_psql.py", line 4, in <module>
+    import api_pipeline
+  File "/app/ETL/api_pipeline.py", line 8, in <module>
+    from utils.fetch_last_cdc import fetch_cdc 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'utils'

@@ -1,0 +1,3 @@
+FROM: api_pipeline.py - No new data found since last CDC 2025-11-06 19:30:00 Exiting!!
+FROM: Load_psql.py - No new records found. Exiting!!
+

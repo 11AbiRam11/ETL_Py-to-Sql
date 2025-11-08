@@ -1,0 +1,22 @@
+Found 64 new records after 2025-11-05 19:30:00
+64 rows inserted successfully.
+Commited the changes
+Updating the last_cdc......
+
+Traceback (most recent call last):
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\Load_psql.py", line 73, in <module>
+    json.dump(cdc, f, indent=4)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+                 ^^^^^^^^
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 433, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 407, in _iterencode_dict
+    yield from chunks
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 440, in _iterencode
+    o = _default(o)
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+                    f'is not JSON serializable')
+TypeError: Object of type datetime is not JSON serializable

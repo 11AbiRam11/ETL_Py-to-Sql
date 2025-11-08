@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: stocks_db
+    restart: always
+    environment:
+      POSTGRES_USER: etl_user
+      POSTGRES_PASSWORD: etl_password
+      POSTGRES_DB: stocksdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  etl:
+    build: .
+    container_name: stocks_etl
+    depends_on:
+      - postgres
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    env_file:
+      - ./config/.env
+    volumes:
+      - ./cdc_:/app/cdc_
+      - ./logs:/app/logs
+    command: ["python", "-m", "scripts.master"]
+    restart: on-failure
+
+volumes:
+  pgdata:

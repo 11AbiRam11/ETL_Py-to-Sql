@@ -1,0 +1,23 @@
+
+Traceback (most recent call last):
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\Load_psql.py", line 21, in <module>
+    data, last_cdc = api_pipeline.fetch_data()
+                     ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\api_pipeline.py", line 115, in fetch_data
+    last_cdc_str = fetch_cdc()
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\utils\fetch_last_cdc.py", line 5, in fetch_cdc
+    json_data = json.load(f)
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mvana\AppData\Local\Programs\Python\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 2 column 12 (char 13)

@@ -1,0 +1,6 @@
+Found 64 new records after 2025-11-05 00:00:00
+64 rows inserted successfully.
+Commited the changes
+Updating the last_cdc......
+last_cdc has been updated: 2025-11-05 00:00:00
+

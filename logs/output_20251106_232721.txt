@@ -1,0 +1,9 @@
+
+Traceback (most recent call last):
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\Load_psql.py", line 20, in <module>
+    data, last_cdc = api_pipeline.fetch_data()
+                     ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\api_pipeline.py", line 50, in fetch_data
+    if datetime.strptime(dt, format_code) > last_cdc
+       ^^^^^^^^^^^^^^^^^
+AttributeError: module 'datetime' has no attribute 'strptime'
