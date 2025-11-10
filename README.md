@@ -33,7 +33,9 @@ The ETL pipeline is designed with a modular and containerized architecture:
 4.  **ETL Core (`ETL/Load_psql.py`):** This script contains the main ETL logic:
     *   It reads the last successful run's timestamp from `cdc_/last_cdc.json`.
     *   It calls the `api_pipeline.py` module to fetch new data from the Alpha Vantage API.
-    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and adds a `UNIQUE` constraint to the `trade_timestamp_utc` column to prevent duplicate entries. It then inserts the new data, ignoring any conflicts with existing records.
+    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and idempotently adds a `UNIQUE` constraint on the `trade_timestamp_utc` column.
+    *   It inserts the fetched data using an `INSERT ... ON CONFLICT DO NOTHING` query. This prevents duplicate records by silently skipping any rows that would violate the unique constraint.
+    *   The script logs the number of rows successfully inserted and the number of rows skipped.
     *   Upon successful insertion, it updates the `last_cdc.json` file with the latest timestamp from the newly fetched data.
 
 5.  **Data Extraction (`ETL/api_pipeline.py`):** This module is responsible for:
