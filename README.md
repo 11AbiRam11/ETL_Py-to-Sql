@@ -26,7 +26,7 @@ The ETL pipeline is designed with a modular and containerized architecture:
 3.  **Orchestrator (`scripts/master.py`):** This script is the main entry point. It:
     *   Executes the core ETL script (`ETL/Load_psql.py`) as a subprocess.
     *   Captures all `stdout` and `stderr` from the subprocess.
-    *   Logs the output to a timestamped file in the `logs/` directory.
+    *   Logs the output to a timestamped file within a month-wise subdirectory (e.g., `logs/YYYY-MM/`) inside the `logs/` directory.
     *   Sends the log content as an email notification.
 
 4.  **ETL Core (`ETL/Load_psql.py`):** This script contains the main ETL logic:
@@ -111,7 +111,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
 │   ├── api_pipeline.py     # Fetches, filters, and transforms data from the Alpha Vantage API.
 │   └── Load_psql.py        # Connects to the database, creates the table, and loads the data.
 ├── logs/
-│   └── ...                 # Contains timestamped logs of each ETL run.
+│   └── ...                 # Contains month-wise subdirectories, each holding timestamped logs of ETL runs for that month (e.g., `logs/YYYY-MM/output_timestamp.txt`).
 ├── scripts/
 │   └── master.py           # The entry point script that orchestrates the ETL run, logging, and notifications.
 ├── tests/
