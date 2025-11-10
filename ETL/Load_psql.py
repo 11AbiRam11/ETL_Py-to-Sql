@@ -35,6 +35,17 @@ if not data or (isinstance(data, list) and len(data[0]) == 0):
 else:
     print(f"Found {len(data)} new records after {last_cdc}")
     try:
+        # First, connect to add the constraint if it doesn't exist.
+        with psycopg2.connect(**db_config) as conn:
+            conn.autocommit = True
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("ALTER TABLE stocks_data ADD CONSTRAINT trade_timestamp_utc_unique UNIQUE (trade_timestamp_utc);")
+                    print("Successfully added UNIQUE constraint to 'trade_timestamp_utc'.")
+            except psycopg2.Error:
+                pass # Ignore error if constraint already exists or table has duplicates
+
+        # Now, connect again for the main ETL process
         with psycopg2.connect(**db_config) as conn:
             with conn.cursor() as cur:
                 create_table = """
@@ -51,10 +62,22 @@ else:
 
                 insert_query = """
                                 INSERT INTO stocks_data (trade_timestamp_utc, symbol, open, high, low, close, volume)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (trade_timestamp_utc) DO NOTHING;
                                 """
-                cur.executemany(insert_query, data)
-                print(f"{cur.rowcount} rows inserted successfully.")
+                
+                inserted_rows = 0
+                for row in data:
+                    cur.execute(insert_query, row)
+                    if cur.rowcount > 0:
+                        inserted_rows += cur.rowcount
+                
+                skipped_rows = len(data) - inserted_rows
+                
+                if inserted_rows > 0:
+                    print(f"{inserted_rows} rows inserted successfully.")
+                if skipped_rows > 0:
+                    print(f"{skipped_rows} records already exist. Skipping.")
 
                 # saving
                 conn.commit()

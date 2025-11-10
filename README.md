@@ -9,6 +9,7 @@ This project implements a robust and automated ETL (Extract, Transform, Load) pi
 - **Change Data Capture (CDC):** Efficiently fetches only new data since the last run by tracking the last timestamp.
 - **Robust Error Handling:** Implements retry logic for API calls and provides clear error messages.
 - **PostgreSQL Integration:** Stores the cleaned and transformed data in a PostgreSQL database.
+- **Data Integrity:** Enforces data integrity by applying a `UNIQUE` constraint on the `trade_timestamp_utc` column, preventing duplicate entries.
 - **Email Notifications:** Sends an email summary of the ETL run, including any errors.
 - **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
 - **Unit Tested:** Includes unit tests for the API data fetching logic.
@@ -32,7 +33,7 @@ The ETL pipeline is designed with a modular and containerized architecture:
 4.  **ETL Core (`ETL/Load_psql.py`):** This script contains the main ETL logic:
     *   It reads the last successful run's timestamp from `cdc_/last_cdc.json`.
     *   It calls the `api_pipeline.py` module to fetch new data from the Alpha Vantage API.
-    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and inserts the new data.
+    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and adds a `UNIQUE` constraint to the `trade_timestamp_utc` column to prevent duplicate entries. It then inserts the new data, ignoring any conflicts with existing records.
     *   Upon successful insertion, it updates the `last_cdc.json` file with the latest timestamp from the newly fetched data.
 
 5.  **Data Extraction (`ETL/api_pipeline.py`):** This module is responsible for:
