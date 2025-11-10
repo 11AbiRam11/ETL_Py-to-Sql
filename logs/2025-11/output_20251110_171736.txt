@@ -1,0 +1,7 @@
+
+Traceback (most recent call last):
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\Load_psql.py", line 6, in <module>
+    import api_pipeline
+  File "C:\Users\mvana\Desktop\DE\Stocks_ETL\ETL\api_pipeline.py", line 7, in <module>
+    from utils.fetch_last_cdc import fetch_cdc
+ModuleNotFoundError: No module named 'utils'

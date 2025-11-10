@@ -3,6 +3,11 @@ from datetime import datetime, date, timedelta
 import time
 import requests
 from dotenv import load_dotenv
+import sys
+
+# Add project root to sys.path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 
 from utils.fetch_last_cdc import fetch_cdc
 

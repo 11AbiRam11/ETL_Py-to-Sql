@@ -3,6 +3,12 @@ import psycopg2
 import json
 import pytz
 from dotenv import load_dotenv
+import sys
+
+# Add project root to sys.path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
 import api_pipeline
 from utils.fetch_last_cdc import fetch_cdc
 
