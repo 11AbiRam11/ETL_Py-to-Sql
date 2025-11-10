@@ -10,20 +10,35 @@ This project implements a robust and automated ETL (Extract, Transform, Load) pi
 - **Robust Error Handling:** Implements retry logic for API calls and provides clear error messages.
 - **PostgreSQL Integration:** Stores the cleaned and transformed data in a PostgreSQL database.
 - **Email Notifications:** Sends an email summary of the ETL run, including any errors.
-- **Containerized an-d Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
+- **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
 - **Unit Tested:** Includes unit tests for the API data fetching logic.
 
-## ETL Workflow
+## Architecture
 
-1.  **Orchestration:** The `docker-compose up` command starts the `etl` service, which runs the `scripts/master.py` script.
-2.  **Execution:** The `master.py` script executes the main ETL logic in `ETL/Load_psql.py`.
-3.  **CDC Check:** `Load_psql.py` fetches the timestamp of the last successfully processed record from the `cdc_/last_cdc.json` file.
-4.  **Extract:** It then calls `ETL/api_pipeline.py`, which makes a request to the Alpha Vantage API for new intraday data for the "IBM" stock symbol, published after the last CDC timestamp.
-5.  **Transform:** The raw JSON response is transformed into a structured format (a list of tuples) ready for database insertion.
-6.  **Load:** `Load_psql.py` connects to the PostgreSQL database and inserts the new records into the `stocks_data` table.
-7.  **Update CDC:** After a successful database commit, the CDC timestamp is updated in the `cdc_/last_cdc.json` file with the timestamp of the latest record.
-8.  **Logging:** The `master.py` script captures all output (both standard output and errors) from the ETL process and writes it to a timestamped log file in the `logs/` directory.
-9.  **Notification:** Finally, `master.py` sends the captured output in an email, providing a summary of the ETL run.
+The ETL pipeline is designed with a modular and containerized architecture:
+
+1.  **Docker Compose (`docker-compose.yml`):** Defines and orchestrates the two main services:
+    *   `postgres`: A PostgreSQL database instance for storing the stock data.
+    *   `etl`: The Python application that runs the ETL process. It is configured to start only after the `postgres` service is healthy.
+
+2.  **ETL Service (`Dockerfile`):** The `etl` service is built from a Python image. The `Dockerfile` copies the application code and installs the required dependencies from `Config/requirements.txt`. The entry point for the container is `scripts/master.py`.
+
+3.  **Orchestrator (`scripts/master.py`):** This script is the main entry point. It:
+    *   Executes the core ETL script (`ETL/Load_psql.py`) as a subprocess.
+    *   Captures all `stdout` and `stderr` from the subprocess.
+    *   Logs the output to a timestamped file in the `logs/` directory.
+    *   Sends the log content as an email notification.
+
+4.  **ETL Core (`ETL/Load_psql.py`):** This script contains the main ETL logic:
+    *   It reads the last successful run's timestamp from `cdc_/last_cdc.json`.
+    *   It calls the `api_pipeline.py` module to fetch new data from the Alpha Vantage API.
+    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and inserts the new data.
+    *   Upon successful insertion, it updates the `last_cdc.json` file with the latest timestamp from the newly fetched data.
+
+5.  **Data Extraction (`ETL/api_pipeline.py`):** This module is responsible for:
+    *   Fetching intraday stock data from the Alpha Vantage API.
+    *   Filtering the data to include only records newer than the last CDC timestamp.
+    *   Transforming the JSON response into a clean, structured format for database insertion.
 
 ## Getting Started
 
@@ -43,7 +58,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
     ```
 
 2.  **Set up the Environment File:**
-    Create a file named `.env` inside the `Config/` directory. This file will store your secret keys and database configuration.
+    Create a file named `.env` inside the `Config/` directory. This file will store your secret keys and database configuration. You can use `Config/env_format` as a template.
 
     ```ini
     # --- API Configuration ---
@@ -83,6 +98,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
 ## Project Structure
 
 ```
+.
 ├── docker-compose.yml      # Defines and configures the Docker services (ETL app, Postgres DB).
 ├── Dockerfile              # Instructions to build the Docker image for the ETL application.
 ├── README.md               # This file.
