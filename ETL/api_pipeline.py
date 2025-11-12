@@ -4,6 +4,7 @@ import time
 import requests
 from dotenv import load_dotenv
 import sys
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 # Add project root to sys.path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,6 +25,7 @@ FORMAT_CODE = "%Y-%m-%d %H:%M:%S"
 TIME_SERIES_KEY = "Time Series (30min)"
 
 
+@retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
 def fetch_data(symbol):
     """
     Fetches intraday stock data from AlphaVantage since the last CDC timestamp.
