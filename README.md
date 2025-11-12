@@ -61,7 +61,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
     ```
 
 2.  **Set up the Environment File:**
-    Create a file named `.env` inside the `Config/` directory. This file will store your secret keys and database configuration. You can use `Config/env_format` as a template.
+    Create a file named `.env` inside the `Config/` directory. This file will store your secret keys and database configuration. 
 
     ```ini
     # --- API Configuration ---
