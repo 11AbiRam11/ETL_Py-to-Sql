@@ -43,14 +43,15 @@ The ETL pipeline is designed with a modular and containerized architecture:
     *   Filtering the data to include only records newer than the last CDC timestamp.
     *   Transforming the JSON response into a clean, structured format for database insertion.
 
-## Getting Started
+## Getting Started (Docker)
 
-Follow these instructions to get the ETL pipeline running on your local machine.
+Follow these instructions to get the ETL pipeline running on your local machine using Docker. This is the recommended method.
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
+- A Git client
 
 ### Configuration
 
@@ -71,7 +72,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
     DB_NAME="stocksdb"
     DB_USER="etl_user"
     DB_PASS="etl_password"
-    DB_HOST="postgres" # This should match the service name in docker-compose.yml
+    DB_HOST="postgres" # This MUST match the service name in docker-compose.yml
     DB_PORT="5432"
 
     # --- Email Configuration ---
@@ -96,7 +97,51 @@ Follow these instructions to get the ETL pipeline running on your local machine.
     ```bash
     docker-compose logs -f etl
     ```
-    The full output of each run is also saved to a timestamped file in the `/logs` directory.
+    The full output of each run is also saved to a timestamped file in the `logs/` directory.
+
+## Alternative: Running Locally (Without Docker)
+
+You can also run the ETL pipeline directly on your machine. This requires a local Python and PostgreSQL installation.
+
+### Prerequisites
+
+- Python 3.9+
+- A running PostgreSQL server
+
+### Configuration
+
+1.  **Set up a Virtual Environment:**
+    From the project root, create and activate a virtual environment.
+    ```bash
+    # Create the virtual environment
+    python -m venv .venv
+    # Activate it (Windows)
+    .\.venv\Scripts\activate
+    # Activate it (macOS/Linux)
+    source .venv/bin/activate
+    ```
+
+2.  **Install Dependencies:**
+    ```bash
+    pip install -r Config/requirements.txt
+    ```
+
+3.  **Set up the Environment File:**
+    Create the `Config/.env` file as described in the Docker setup, but with one key change:
+    ```ini
+    # In Config/.env
+    DB_HOST="localhost" # Connect to your local PostgreSQL server
+    ```
+
+### Running the Pipeline
+
+With your virtual environment activated, run the master script:
+```bash
+# On Windows
+.\run_script.bat
+# Or on any OS
+python scripts/master.py
+```
 
 ## Project Structure
 
@@ -105,6 +150,8 @@ Follow these instructions to get the ETL pipeline running on your local machine.
 ├── docker-compose.yml      # Defines and configures the Docker services (ETL app, Postgres DB).
 ├── Dockerfile              # Instructions to build the Docker image for the ETL application.
 ├── README.md               # This file.
+├── run_script.bat          # Convenience script for running the ETL process on Windows.
+├── production_guide.md     # A guide to production-grade coding practices used in this project.
 ├── cdc_/
 │   └── last_cdc.json       # Stores the timestamp of the last fetched record to prevent duplicates.
 ├── Config/
@@ -114,7 +161,7 @@ Follow these instructions to get the ETL pipeline running on your local machine.
 │   ├── api_pipeline.py     # Fetches, filters, and transforms data from the Alpha Vantage API.
 │   └── Load_psql.py        # Connects to the database, creates the table, and loads the data.
 ├── logs/
-│   └── ...                 # Contains month-wise subdirectories, each holding timestamped logs of ETL runs for that month (e.g., `logs/YYYY-MM/output_timestamp.txt`).
+│   └── ...                 # Contains month-wise subdirectories for timestamped logs.
 ├── scripts/
 │   └── master.py           # The entry point script that orchestrates the ETL run, logging, and notifications.
 ├── tests/
@@ -132,3 +179,7 @@ The project includes unit tests for the API pipeline logic. To run the tests, ex
 docker-compose exec etl python -m unittest tests/test_api_pipeline.py
 ```
 This command runs the tests inside the `etl` container to ensure the environment is consistent.
+
+## Code Quality and Best Practices
+
+This project was developed with a strong emphasis on creating clean, maintainable, and production-ready code. For a detailed overview of the principles and tools used (such as `ruff` for linting, `black` for formatting, and `pytest` for testing), please see the **[Developer's Guide to Production-Grade Code](production_guide.md)**.
