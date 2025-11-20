@@ -4,7 +4,6 @@ import json
 import pytz
 from dotenv import load_dotenv
 import sys
-from tenacity import retry
 
 
 def load_data():
