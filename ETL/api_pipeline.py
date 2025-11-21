@@ -4,6 +4,7 @@ import time
 import requests
 from dotenv import load_dotenv
 import sys
+import logging
 from tenacity import retry, wait_fixed, stop_after_attempt
 
 # Add project root to sys.path
@@ -11,6 +12,10 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
 from utils.fetch_last_cdc import fetch_cdc
+
+# --- Logger Setup ---
+# Get a logger instance for this module
+logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 load_dotenv()
@@ -36,13 +41,13 @@ def fetch_data(symbol):
     # 1. Fetch and Parse CDC Timestamp
     last_cdc_str = fetch_cdc()
 
-    # FIX: Convert string CDC to datetime object for arithmetic
+    # Convert string CDC to datetime object for arithmetic
     try:
         last_cdc = datetime.strptime(last_cdc_str, FORMAT_CODE)
     except Exception as e:
-        print(f"Error parsing last_cdc timestamp: {e}. Using default old date.")
+        logger.error(f"Error parsing last_cdc timestamp: {e}. Using default old date.")
         # Default to a very old date if CDC is missing or invalid
-        last_cdc = datetime(2025 - 11 - 1)
+        last_cdc = datetime(2025, 1, 1)  # Corrected date initialization
 
     # 2. Add safe buffer to CDC
     # Use >= safe_cdc in filter to ensure all records *after* the last processed
@@ -50,6 +55,7 @@ def fetch_data(symbol):
 
     # 3. API Call Setup
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={SYMBOL}&interval=30min&apikey={API_KEY}&month={year_month}&outputsize=full"
+    data = None
     for i in range(3):  # Try 3 times
         try:
             r = requests.get(url)
@@ -57,18 +63,17 @@ def fetch_data(symbol):
             data = r.json()
             break  # If successful, break the loop
         except requests.exceptions.RequestException as e:
-            print(f"API call failed (attempt {i + 1}/3): {e}")
+            logger.warning(f"API call failed (attempt {i + 1}/3): {e}")
             time.sleep(5)  # Wait 5 seconds before trying again
-    else:  # If the loop finishes without a break
-        print("API call failed after 3 attempts. Exiting.")
-        # You might want to send an email notification here
+    
+    if data is None:
+        logger.error("API call failed after 3 attempts. Exiting.")
         return [], last_cdc
 
     # 4. Error and Rate Limit Check
     if TIME_SERIES_KEY not in data:
-        print(
-            f"Error fetching data for {SYMBOL}: {data.get('Note', 'Check API key or symbol, or check API rate limits. Exiting!!')}"
-        )
+        error_message = data.get('Note', 'Check API key or symbol, or check API rate limits. Exiting!!')
+        logger.error(f"Error fetching data for {SYMBOL}: {error_message}")
         # Return empty list and current CDC without halting the program
         return [], last_cdc
 
@@ -80,10 +85,7 @@ def fetch_data(symbol):
     ]
 
     if not new_timestamps:
-        # Use datetime.now() for the log, not the unused 'date_time' variable
-        print(
-            f"FROM: api_pipeline.py - No new data found since last CDC {last_cdc_str} Exiting!!"
-        )
+        logger.info(f"FROM: api_pipeline.py - No new data found since last CDC {last_cdc_str}. Exiting!!")
         return [[]], last_cdc
 
     # Get raw keys for one entry
@@ -100,5 +102,6 @@ def fetch_data(symbol):
         )
         for ts in new_timestamps
     ]
-
+    
+    logger.info(f"Successfully fetched {len(final_data)} new data points.")
     return final_data, all_dates[0]

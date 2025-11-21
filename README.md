@@ -80,7 +80,7 @@ Follow these instructions to get the ETL pipeline running on your local machine 
     EMAIL_SENDER_PASSWORD="your_email_password"
     EMAIL_RECIPIENT_ADDRESS="recipient_email@example.com"
     ```
-    - Replace `"YOUR_ALPHAVANTAGE_API_KEY"` with your actual key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key).
+    - Replace `"YOUR_ALPHAVANTAGE_API_KEY"` with your actual key from [Alpha Vantage](https://www.alphavantage. co/support/#api-key).
     - Update the email settings to enable notifications.
 
 ### Running the Pipeline

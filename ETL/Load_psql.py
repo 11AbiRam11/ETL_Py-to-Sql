@@ -4,7 +4,10 @@ import json
 import pytz
 from dotenv import load_dotenv
 import sys
+import logging
 
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
 
 def load_data():
     """
@@ -35,10 +38,10 @@ def load_data():
     data, new_last_cdc = api_pipeline.fetch_data(symbol="IBM")
 
     if not data or (isinstance(data, list) and len(data[0]) == 0):
-        print("FROM: Load_psql.py - No new records found. Exiting!!")
+        logging.info("FROM: Load_psql.py - No new records found. Exiting!!")
         # sys.exit()
     else:
-        print(f"Found {len(data)} new records after {last_cdc}")
+        logging.info(f"Found {len(data)} new records after {last_cdc}")
         try:
             # First, connect to add the constraint if it doesn't exist.
             with psycopg2.connect(**db_config) as conn:
@@ -48,7 +51,7 @@ def load_data():
                         cur.execute(
                             "ALTER TABLE stocks_data ADD CONSTRAINT trade_timestamp_utc_unique UNIQUE (trade_timestamp_utc);"
                         )
-                        print(
+                        logging.info(
                             "Successfully added UNIQUE constraint to 'trade_timestamp_utc'."
                         )
                 except psycopg2.Error:
@@ -84,18 +87,18 @@ def load_data():
                     skipped_rows = len(data) - inserted_rows
 
                     if inserted_rows > 0:
-                        print(f"{inserted_rows} rows inserted successfully.")
+                        logging.info(f"{inserted_rows} rows inserted successfully.")
                     if skipped_rows > 0:
-                        print(f"{skipped_rows} records already exist. Skipping.")
+                        logging.info(f"{skipped_rows} records already exist. Skipping.")
 
                     # saving
                     conn.commit()
-                    print("Commited the changes")
+                    logging.info("Committed the changes")
 
         except psycopg2.Error as e:
-            print(e)
+            logging.error(e)
 
-        print("Updating the last_cdc......")
+        logging.info("Updating the last_cdc......")
         try:
             # Try reading existing
             try:
@@ -111,10 +114,10 @@ def load_data():
             with open("cdc_/last_cdc.json", "w") as f:
                 json.dump(cdc, f, indent=4)
 
-            print("last_cdc has been updated:", cdc["cdc"])
+            logging.info(f"last_cdc has been updated: {cdc['cdc']}")
 
         except Exception as e:
-            print("Unexpected error updating CDC:", e)
+            logging.error(f"Unexpected error updating CDC: {e}")
 
 
 if __name__ == "__main__":
