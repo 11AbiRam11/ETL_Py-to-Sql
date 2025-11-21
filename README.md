@@ -55,7 +55,7 @@ The ETL pipeline is designed with a modular and containerized architecture:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/Stocks_ETL.git
+git clone https://github.com/11AbiRam11/Stocks_ETL.git
 cd Stocks_ETL
 ```
 
