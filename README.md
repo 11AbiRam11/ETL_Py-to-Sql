@@ -1,18 +1,18 @@
 # Stocks ETL Pipeline
 
-This project implements a robust and automated ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. The entire application is containerized using Docker for portability and ease of deployment.
+This project provides a robust and automated ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. The entire application is containerized using Docker for portability and ease of deployment.
 
 ## Key Features
 
-- **Automated ETL Workflow:** The pipeline is orchestrated by a master script that automates the entire ETL process.
-- **Intraday Stock Data:** Fetches 30-minute intraday stock data for a specified symbol (default is "IBM").
-- **Change Data Capture (CDC):** Efficiently fetches only new data since the last run by tracking the last timestamp.
-- **Robust Error Handling:** Implements retry logic for API calls and provides clear error messages.
-- **PostgreSQL Integration:** Stores the cleaned and transformed data in a PostgreSQL database.
-- **Data Integrity:** Enforces data integrity by applying a `UNIQUE` constraint on the `trade_timestamp_utc` column, preventing duplicate entries.
-- **Email Notifications:** Sends an email summary of the ETL run, including any errors.
-- **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
-- **Unit Tested:** Includes unit tests for the API data fetching logic.
+*   **Automated ETL Workflow:** The pipeline is orchestrated by a master script that automates the entire ETL process.
+*   **Intraday Stock Data:** Fetches 30-minute intraday stock data for a specified symbol (default is "IBM").
+*   **Change Data Capture (CDC):** Efficiently fetches only new data since the last run by tracking the last timestamp.
+*   **Robust Error Handling:** Implements retry logic for API calls and provides clear error messages.
+*   **PostgreSQL Integration:** Stores the cleaned and transformed data in a PostgreSQL database.
+*   **Data Integrity:** Enforces data integrity by applying a `UNIQUE` constraint on the `trade_timestamp_utc` column, preventing duplicate entries.
+*   **Email Notifications:** Sends an email summary of the ETL run, including any errors.
+*   **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
+*   **Unit Tested:** Includes unit tests for the API data fetching logic.
 
 ## Architecture
 
@@ -43,82 +43,66 @@ The ETL pipeline is designed with a modular and containerized architecture:
     *   Filtering the data to include only records newer than the last CDC timestamp.
     *   Transforming the JSON response into a clean, structured format for database insertion.
 
-## Getting Started (Docker)
-
-Follow these instructions to get the ETL pipeline running on your local machine using Docker. This is the recommended method.
+## Getting Started
 
 ### Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- A Git client
+*   Python 3.9+
+*   Docker & Docker Compose
+*   Git
 
-### Configuration
+### 1. Clone the Repository
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/Stocks_ETL.git
-    cd Stocks_ETL
-    ```
+```bash
+git clone https://github.com/your-username/Stocks_ETL.git
+cd Stocks_ETL
+```
 
-2.  **Set up the Environment File:**
-    Create a file named `.env` inside the `Config/` directory. This file will store your secret keys and database configuration. 
+### 2. Set Up Environment Variables
 
-    ```ini
-    # --- API Configuration ---
-    alphavantage_API_KEY="YOUR_ALPHAVANTAGE_API_KEY"
+Create a `.env` file in the `Config` directory:
 
-    # --- Database Configuration ---
-    DB_NAME="stocksdb"
-    DB_USER="etl_user"
-    DB_PASS="etl_password"
-    DB_HOST="postgres" # This MUST match the service name in docker-compose.yml
-    DB_PORT="5432"
+```ini
+# --- API Configuration ---
+alphavantage_API_KEY="YOUR_ALPHAVANTAGE_API_KEY"
 
-    # --- Email Configuration ---
-    EMAIL_SENDER_ADDRESS="your_email@example.com"
-    EMAIL_SENDER_PASSWORD="your_email_password"
-    EMAIL_RECIPIENT_ADDRESS="recipient_email@example.com"
-    ```
-    - Replace `"YOUR_ALPHAVANTAGE_API_KEY"` with your actual key from [Alpha Vantage](https://www.alphavantage. co/support/#api-key).
-    - Update the email settings to enable notifications.
+# --- Database Configuration ---
+DB_NAME="stocksdb"
+DB_USER="etl_user"
+DB_PASS="etl_password"
+DB_HOST="postgres" # This MUST match the service name in docker-compose.yml
+DB_PORT="5432"
 
-### Running the Pipeline
+# --- Email Configuration ---
+EMAIL_SENDER_ADDRESS="your_email@example.com"
+EMAIL_SENDER_PASSWORD="your_email_password"
+EMAIL_RECIPIENT_ADDRESS="recipient_email@example.com"
+```
 
-1.  **Build and Run with Docker Compose:**
-    From the root of the project directory, run the following command:
+-   Replace `"YOUR_ALPHAVANTAGE_API_KEY"` with your actual key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key).
+-   Update the email settings to enable notifications.
+
+### 3. Running the Pipeline
+
+#### Using Docker (Recommended)
+
+1.  **Build and Run:**
     ```bash
     docker-compose up --build
     ```
-    This will build the Docker image for the `etl` service, start both the `postgres` and `etl` containers, and execute the pipeline. Add the `-d` flag to run in detached mode.
+    This will build the Docker image, start the `postgres` and `etl` containers, and run the pipeline. Use the `-d` flag to run in detached mode.
 
-2.  **Monitor the Logs:**
-    You can monitor the real-time output of the ETL service using:
+2.  **Monitor Logs:**
     ```bash
     docker-compose logs -f etl
     ```
-    The full output of each run is also saved to a timestamped file in the `logs/` directory.
 
-## Alternative: Running Locally (Without Docker)
+#### Running Locally
 
-You can also run the ETL pipeline directly on your machine. This requires a local Python and PostgreSQL installation.
-
-### Prerequisites
-
-- Python 3.9+
-- A running PostgreSQL server
-
-### Configuration
-
-1.  **Set up a Virtual Environment:**
-    From the project root, create and activate a virtual environment.
+1.  **Create Virtual Environment:**
     ```bash
-    # Create the virtual environment
     python -m venv .venv
-    # Activate it (Windows)
-    .\.venv\Scripts\activate
-    # Activate it (macOS/Linux)
-    source .venv/bin/activate
+    source .venv/bin/activate  # On Windows, use `.\.venv\Scripts\activate`
     ```
 
 2.  **Install Dependencies:**
@@ -126,22 +110,13 @@ You can also run the ETL pipeline directly on your machine. This requires a loca
     pip install -r Config/requirements.txt
     ```
 
-3.  **Set up the Environment File:**
-    Create the `Config/.env` file as described in the Docker setup, but with one key change:
-    ```ini
-    # In Config/.env
-    DB_HOST="localhost" # Connect to your local PostgreSQL server
+3.  **Update `.env` for Local DB:**
+    In `Config/.env`, change `DB_HOST` to `localhost`.
+
+4.  **Run the Pipeline:**
+    ```bash
+    python scripts/master.py
     ```
-
-### Running the Pipeline
-
-With your virtual environment activated, run the master script:
-```bash
-# On Windows
-.\run_script.bat
-# Or on any OS
-python scripts/master.py
-```
 
 ## Project Structure
 
@@ -173,12 +148,11 @@ python scripts/master.py
 
 ## Testing
 
-The project includes unit tests for the API pipeline logic. To run the tests, execute the following command while the services are running:
+To run the unit tests for the API pipeline logic, execute the following command while the services are running:
 
 ```bash
 docker-compose exec etl python -m unittest tests/test_api_pipeline.py
 ```
-This command runs the tests inside the `etl` container to ensure the environment is consistent.
 
 ## Code Quality and Best Practices
 
