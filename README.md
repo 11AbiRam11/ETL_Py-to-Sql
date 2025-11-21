@@ -1,4 +1,4 @@
-# Stocks ETL Pipeline
+# Stocks ETL Pipeline (Production grade pipeline)
 
 This project provides a robust and automated ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. The entire application is containerized using Docker for portability and ease of deployment.
 
@@ -13,6 +13,7 @@ This project provides a robust and automated ETL (Extract, Transform, Load) pipe
 *   **Email Notifications:** Sends an email summary of the ETL run, including any errors.
 *   **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
 *   **Unit Tested:** Includes unit tests for the API data fetching logic.
+*   **Logging:** It has logging feature to log all individual steps in the pipeline for easier debugging
 
 ## Architecture
 
@@ -154,6 +155,30 @@ To run the unit tests for the API pipeline logic, execute the following command 
 docker-compose exec etl python -m unittest tests/test_api_pipeline.py
 ```
 
-## Code Quality and Best Practices
+## Production-Grade Practices Applied
 
-This project was developed with a strong emphasis on creating clean, maintainable, and production-ready code. For a detailed overview of the principles and tools used (such as `ruff` for linting, `black` for formatting, and `pytest` for testing), please see the **[Developer's Guide to Production-Grade Code](production_guide.md)**.
+This project emphasizes clean, maintainable, and robust code by applying several production-grade practices:
+
+### Modularity and Single Responsibility
+
+Our code is broken into small, single-purpose functions and modules, following the principle that a function should do one thing and do it well. This approach enhances testability, debugging, and code reuse, as seen in the `utils/` directory for shared functionalities.
+
+### Robust Error Handling
+
+Our application is designed to anticipate and gracefully handle unexpected issues that arise in real-world scenarios, such as network failures or API changes.
+
+**Key Practices:**
+
+1.  **Specific Exceptions:** We catch specific exceptions (e.g., `FileNotFoundError`, database-specific errors) to precisely identify and handle different failure types.
+2.  **Idempotency:** Operations are designed to be idempotent, meaning running them multiple times yields the same result as running them once. This prevents issues like duplicate entries if data is processed accidentally more than once.
+3.  **Retries with Exponential Backoff:** For transient errors, operations are retried with progressively longer delays between attempts, improving resilience against temporary outages.
+
+### Structured Logging
+
+Understanding the application's behavior in production is critical for debugging and monitoring. We implement comprehensive logging practices:
+
+**Key Practices:**
+
+1.  **The `logging` Module:** Python's built-in `logging` module is used for its powerful and flexible capabilities.
+2.  **Log Levels:** Different log levels (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) are utilized to indicate event severity, allowing for configurable log verbosity in different environments.
+3.  **Structured Logging:** Log messages are generated in a machine-readable format (e.g., JSON), facilitating easier searching, filtering, and analysis with modern logging tools.
