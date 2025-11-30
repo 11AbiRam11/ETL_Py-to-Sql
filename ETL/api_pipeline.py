@@ -39,7 +39,7 @@ def fetch_data(symbol):
     SYMBOL = symbol
 
     # 1. Fetch and Parse CDC Timestamp
-    last_cdc_str = fetch_cdc()
+    last_cdc_str = fetch_cdc(symbol=symbol)
 
     # Convert string CDC to datetime object for arithmetic
     try:
@@ -54,7 +54,7 @@ def fetch_data(symbol):
     safe_cdc = last_cdc + timedelta(seconds=1)
 
     # 3. API Call Setup
-    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={SYMBOL}&interval=30min&apikey={API_KEY}&month={year_month}&outputsize=full"
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={SYMBOL}&interval=30min&apikey={API_KEY}&month={year_month}"
     data = None
     for i in range(3):  # Try 3 times
         try:
@@ -65,15 +65,19 @@ def fetch_data(symbol):
         except requests.exceptions.RequestException as e:
             logger.warning(f"API call failed (attempt {i + 1}/3): {e}")
             time.sleep(5)  # Wait 5 seconds before trying again
-    
+
     if data is None:
         logger.error("API call failed after 3 attempts. Exiting.")
         return [], last_cdc
 
     # 4. Error and Rate Limit Check
     if TIME_SERIES_KEY not in data:
-        error_message = data.get('Note', 'Check API key or symbol, or check API rate limits. Exiting!!')
-        logger.error(f"Error fetching data for {SYMBOL}: {error_message}")
+        error_message = data.get(
+            "Note", "Check API key or symbol, or check API rate limits. Exiting!!"
+        )
+        logger.error(
+            f"Error fetching data for {SYMBOL}: {data['Information'] if 'Information' in data else error_message}"
+        )
         # Return empty list and current CDC without halting the program
         return [], last_cdc
 
@@ -85,7 +89,9 @@ def fetch_data(symbol):
     ]
 
     if not new_timestamps:
-        logger.info(f"FROM: api_pipeline.py - No new data found since last CDC {last_cdc_str}. Exiting!!")
+        logger.info(
+            f"FROM: api_pipeline.py - No new data found for {symbol} since last CDC {last_cdc_str}. Exiting!!"
+        )
         return [[]], last_cdc
 
     # Get raw keys for one entry
@@ -102,6 +108,10 @@ def fetch_data(symbol):
         )
         for ts in new_timestamps
     ]
-    
-    logger.info(f"Successfully fetched {len(final_data)} new data points.")
+
+    logger.info(f"Successfully fetched {len(final_data)} new data records for {symbol}")
     return final_data, all_dates[0]
+
+
+if __name__ == "__main__":
+    print(fetch_data(symbol="V"))

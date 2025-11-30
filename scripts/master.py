@@ -61,7 +61,7 @@ LOAD_PSQL_PATH = os.path.join(project_root, "ETL", "Load_psql.py")
 try:
     logger.info(f"Running subprocess")
     result = subprocess.run(
-        ["python", LOAD_PSQL_PATH],
+        ["python", LOAD_PSQL_PATH, "IBM"],
         capture_output=True,
         text=True,
         check=False,  # We check the returncode manually to log appropriately
@@ -80,8 +80,8 @@ try:
 
 except FileNotFoundError:
     logger.exception(f"Error: The script at {LOAD_PSQL_PATH} was not found.")
-except Exception:
-    logger.exception("An unexpected error occurred during subprocess execution.")
+except Exception as e:
+    logger.exception(f"An unexpected error occurred during subprocess execution. {e}")
 
 # Send email with the captured logs from this run
 try:

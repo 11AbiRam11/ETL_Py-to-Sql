@@ -1,109 +1,124 @@
-# Stocks ETL Pipeline (Production grade pipeline)
+# Stocks ETL Pipeline
 
-This project provides a robust and automated ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. The entire application is containerized using Docker for portability and ease of deployment.
+This project provides a robust, production-inspired ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. It features two main workflows: an automated, incremental daily pipeline and a manual historical backfill pipeline. The entire application is containerized using Docker for portability and ease of deployment.
 
 ## Key Features
 
-*   **Automated ETL Workflow:** The pipeline is orchestrated by a master script that automates the entire ETL process.
-*   **Intraday Stock Data:** Fetches 30-minute intraday stock data for a specified symbol (default is "IBM").
-*   **Change Data Capture (CDC):** Efficiently fetches only new data since the last run by tracking the last timestamp.
-*   **Robust Error Handling:** Implements retry logic for API calls and provides clear error messages.
-*   **PostgreSQL Integration:** Stores the cleaned and transformed data in a PostgreSQL database.
-*   **Data Integrity:** Enforces data integrity by applying a `UNIQUE` constraint on the `trade_timestamp_utc` column, preventing duplicate entries.
-*   **Email Notifications:** Sends an email summary of the ETL run, including any errors.
-*   **Containerized and Isolated:** Uses Docker and Docker Compose to create a reproducible and isolated environment.
-*   **Unit Tested:** Includes unit tests for the API data fetching logic.
-*   **Logging:** It has logging feature to log all individual steps in the pipeline for easier debugging
+### General
+*   **Containerized Environment:** Uses Docker and Docker Compose for a reproducible and isolated environment for the ETL application and PostgreSQL database.
+*   **Robust Logging:** Implements comprehensive logging to files (`logs/YYYY-MM/YYYY-MM-DD.log`) and the console for clear monitoring and debugging.
+*   **Email Notifications:** Automatically sends a summary of the daily ETL run via email, making it easy to monitor its status.
+*   **Data Integrity:** Uses a composite `UNIQUE` constraint (`symbol`, `trade_timestamp_utc`) in the database to prevent duplicate data entries.
+*   **Unit Tested:** Includes a unit test suite for the core API data fetching logic.
 
-## Architecture
+### 1. Incremental Daily Pipeline
+*   **Automated Workflow:** The main pipeline is orchestrated by a master script that runs automatically via Docker Compose.
+*   **Change Data Capture (CDC):** Efficiently fetches only new data since the last successful run by tracking the latest timestamp in `cdc_/last_cdc.json`.
+*   **Scheduled Runs:** Designed to be run on a schedule (e.g., daily) to keep the database updated with the latest 30-minute intraday data.
 
-The ETL pipeline is designed with a modular and containerized architecture:
+### 2. Historical Backfill Pipeline
+*   **Bulk Data Fetching:** Capable of fetching years of historical intraday data, month by month, for a comprehensive dataset.
+*   **Memory Efficient:** Uses a generator-based approach to process data in monthly chunks, allowing it to handle very large datasets without running out of memory.
+*   **Multi-Symbol Support:** Easily configurable to backfill data for a list of multiple stock symbols.
+*   **Rate Limit Aware:** Includes delays to respect the Alpha Vantage API's rate limits during long-running backfill jobs.
 
-1.  **Docker Compose (`docker-compose.yml`):** Defines and orchestrates the two main services:
-    *   `postgres`: A PostgreSQL database instance for storing the stock data.
-    *   `etl`: The Python application that runs the ETL process. It is configured to start only after the `postgres` service is healthy.
+## Architecture & Workflows
 
-2.  **ETL Service (`Dockerfile`):** The `etl` service is built from a Python image. The `Dockerfile` copies the application code and installs the required dependencies from `Config/requirements.txt`. The entry point for the container is `scripts/master.py`.
+### 1. Incremental Daily Workflow
+This is the primary, automated workflow for daily data collection.
 
-3.  **Orchestrator (`scripts/master.py`):** This script is the main entry point. It:
-    *   Executes the core ETL script (`ETL/Load_psql.py`) as a subprocess.
-    *   Captures all `stdout` and `stderr` from the subprocess.
-    *   Logs the output to a timestamped file within a month-wise subdirectory (e.g., `logs/YYYY-MM/`) inside the `logs/` directory.
-    *   Sends the log content as an email notification.
+1.  **Orchestration (`docker-compose.yml`):** The `docker-compose up` command starts the `etl` and `postgres` services. The `etl` service is configured to run the master script as its entry point.
+2.  **Master Script (`scripts/master.py`):** This script orchestrates the pipeline. It executes `ETL/Load_psql.py` as a subprocess, captures its log output, and sends it as an email notification. It is currently hardcoded to process the symbol **IBM**.
+3.  **Loading Script (`ETL/Load_psql.py`):** This script handles the core ETL logic for the incremental load.
+    *   It calls `ETL/api_pipeline.py` to get the latest data.
+    *   It connects to the PostgreSQL database, creates the `stocks_data` table if needed, and inserts the new data using an `ON CONFLICT DO NOTHING` clause to prevent duplicates.
+    *   After a successful insert, it updates the timestamp in `cdc_/last_cdc.json` for the given symbol.
+4.  **Extraction (`ETL/api_pipeline.py`):** This module reads the last CDC timestamp and fetches only newer 30-minute interval data from Alpha Vantage for the current month.
 
-4.  **ETL Core (`ETL/Load_psql.py`):** This script contains the main ETL logic:
-    *   It reads the last successful run's timestamp from `cdc_/last_cdc.json`.
-    *   It calls the `api_pipeline.py` module to fetch new data from the Alpha Vantage API.
-    *   It connects to the PostgreSQL database, creates the `stocks_data` table if it doesn't exist, and idempotently adds a `UNIQUE` constraint on the `trade_timestamp_utc` column.
-    *   It inserts the fetched data using an `INSERT ... ON CONFLICT DO NOTHING` query. This prevents duplicate records by silently skipping any rows that would violate the unique constraint.
-    *   The script logs the number of rows successfully inserted and the number of rows skipped.
-    *   Upon successful insertion, it updates the `last_cdc.json` file with the latest timestamp from the newly fetched data.
+### 2. Historical Backfill Workflow
+This workflow is designed for manually populating the database with a large amount of historical data.
 
-5.  **Data Extraction (`ETL/api_pipeline.py`):** This module is responsible for:
-    *   Fetching intraday stock data from the Alpha Vantage API.
-    *   Filtering the data to include only records newer than the last CDC timestamp.
-    *   Transforming the JSON response into a clean, structured format for database insertion.
+1.  **Orchestrator (`scripts/backFill.py`):** This script is run manually. It contains a list of stock symbols and iterates through them.
+2.  **Execution:** For each symbol, it should invoke a process that uses the `ETL/backFill_api_pipeline.py` to fetch all historical data and then loads it into the database.
+    *   **Note:** The current implementation of `scripts/backFill.py` incorrectly calls the incremental loading script (`Load_psql.py`). For a true backfill, it should be modified to use `backFill_api_pipeline.py` and a corresponding loading script.
+3.  **Extraction (`ETL/backFill_api_pipeline.py`):** This script is optimized for history. It fetches data for a given symbol month by month over a multi-year range (2000-present) and yields the data in chunks to be memory efficient.
 
 ## Getting Started
 
 ### Prerequisites
 
-*   Python 3.9+
+*   Python 3.11+
 *   Docker & Docker Compose
 *   Git
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/Stocks_ETL.git
+git clone <your-repository-url>
 cd Stocks_ETL
 ```
 
 ### 2. Set Up Environment Variables
 
-Create a `.env` file in the `Config` directory:
+Create a file named `.env` in the `Config/` directory (`Config/.env`). Copy the following content into it and replace the placeholder values.
 
 ```ini
 # --- API Configuration ---
+# Get your free API key from https://www.alphavantage.co/support/#api-key
 alphavantage_API_KEY="YOUR_ALPHAVANTAGE_API_KEY"
 
 # --- Database Configuration ---
+# These credentials are used by the ETL service to connect to the Postgres container.
+# The DB_HOST MUST match the service name in docker-compose.yml.
 DB_NAME="stocksdb"
 DB_USER="etl_user"
 DB_PASS="etl_password"
-DB_HOST="postgres" # This MUST match the service name in docker-compose.yml
+DB_HOST="postgres"
 DB_PORT="5432"
 
-# --- Email Configuration ---
-EMAIL_SENDER_ADDRESS="your_email@example.com"
-EMAIL_SENDER_PASSWORD="your_email_password"
-EMAIL_RECIPIENT_ADDRESS="recipient_email@example.com"
+# --- Email Notification Configuration ---
+# Use an app-specific password if using Gmail.
+sender_email="your_email@gmail.com"
+email_app_passwd="your_gmail_app_password"
+receiver_email="recipient_email@example.com"
+smtp_server="smtp.gmail.com"
+smtp_port=587
 ```
 
--   Replace `"YOUR_ALPHAVANTAGE_API_KEY"` with your actual key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key).
--   Update the email settings to enable notifications.
+## Usage
 
-### 3. Running the Pipeline
+### Running the Daily Incremental Pipeline (Recommended)
 
-#### Using Docker (Recommended)
+This is the primary way to run the pipeline for daily updates.
 
-1.  **Build and Run:**
+1.  **Build and Run the Docker Containers:**
     ```bash
     docker-compose up --build
     ```
-    This will build the Docker image, start the `postgres` and `etl` containers, and run the pipeline. Use the `-d` flag to run in detached mode.
+    This command will build the `etl` image, start the `postgres` and `etl` containers, and execute the pipeline. To run in the background, use `docker-compose up --build -d`.
 
 2.  **Monitor Logs:**
+    You can view the live logs of the ETL service with:
     ```bash
     docker-compose logs -f etl
     ```
 
-#### Running Locally
+3.  **Stopping the Services:**
+    ```bash
+    docker-compose down
+    ```
 
-1.  **Create Virtual Environment:**
+### Running a Historical Backfill (Locally)
+
+To perform a large historical backfill, you should run the backfill script directly.
+
+1.  **Create a Virtual Environment:**
     ```bash
     python -m venv .venv
-    source .venv/bin/activate  # On Windows, use `.\.venv\Scripts\activate`
+    # On Windows
+    .\.venv\Scripts\activate
+    # On macOS/Linux
+    source .venv/bin/activate
     ```
 
 2.  **Install Dependencies:**
@@ -111,74 +126,78 @@ EMAIL_RECIPIENT_ADDRESS="recipient_email@example.com"
     pip install -r Config/requirements.txt
     ```
 
-3.  **Update `.env` for Local DB:**
-    In `Config/.env`, change `DB_HOST` to `localhost`.
-
-4.  **Run the Pipeline:**
+3.  **Ensure Docker DB is Running:**
+    Make sure the PostgreSQL database is running so the script can connect to it.
     ```bash
-    python scripts/master.py
+    docker-compose up -d postgres
     ```
+
+4.  **Update `.env` for Local Connection:**
+    In `Config/.env`, temporarily change `DB_HOST` to `localhost` since you are running the script from your local machine, not from within the Docker network.
+    ```ini
+    DB_HOST="localhost"
+    ```
+
+5.  **Run the Backfill Script:**
+    The `scripts/backFill.py` script needs to be modified to use the correct backfill pipeline. A proper implementation would look like this:
+
+    ```python
+    # Example modification for scripts/backFill.py
+    import sys
+    sys.path.append('.') # Add project root to path
+    from ETL.backFill_api_pipeline import backfill_data
+    from ETL.Load_psql import load_chunk_to_db # Assuming a new function in Load_psql.py
+
+    symbols_to_backfill = ["NVDA", "AAPL", "GOOGL"]
+    for symbol in symbols_to_backfill:
+        print(f"Starting backfill for {symbol}...")
+        # backfill_data is a generator, so we process data in chunks
+        for monthly_chunk in backfill_data(symbol):
+            # You would need a function to load these chunks.
+            # load_chunk_to_db(monthly_chunk)
+            print(f"Loaded a chunk for {symbol} with {len(monthly_chunk)} records.")
+    ```
+
+## Testing
+
+The project includes unit tests for the incremental API pipeline.
+
+To run the tests, first ensure the services are running:
+```bash
+docker-compose up -d
+```
+
+Then, execute the test suite inside the `etl` container:
+```bash
+docker-compose exec etl python -m unittest tests/test_api_pipeline.py
+```
 
 ## Project Structure
 
 ```
 .
 ├── docker-compose.yml      # Defines and configures the Docker services (ETL app, Postgres DB).
-├── Dockerfile              # Instructions to build the Docker image for the ETL application.
+├── Dockerfile              # Builds the Docker image for the ETL application.
 ├── README.md               # This file.
-├── run_script.bat          # Convenience script for running the ETL process on Windows.
-├── production_guide.md     # A guide to production-grade coding practices used in this project.
+├── run_script.bat          # Windows convenience script to run the daily pipeline locally.
+├── production_guide.md     # A developer's guide to writing production-grade code.
 ├── cdc_/
-│   └── last_cdc.json       # Stores the timestamp of the last fetched record to prevent duplicates.
+│   └── last_cdc.json       # Stores CDC timestamps (e.g., {"IBM_cdc": "2025-11-30 12:00:00"}).
 ├── Config/
-│   ├── .env                # Environment variables (API keys, DB credentials, email settings).
+│   ├── .env                # Holds all environment variables (API keys, DB credentials, etc.).
 │   └── requirements.txt    # Python dependencies for the project.
 ├── ETL/
-│   ├── api_pipeline.py     # Fetches, filters, and transforms data from the Alpha Vantage API.
-│   └── Load_psql.py        # Connects to the database, creates the table, and loads the data.
+│   ├── api_pipeline.py     # (Incremental) Fetches data newer than the last CDC timestamp.
+│   ├── backFill_api_pipeline.py # (Historical) Fetches all data for a symbol, month by month.
+│   └── Load_psql.py        # Loads data into PostgreSQL and manages the CDC state.
 ├── logs/
-│   └── ...                 # Contains month-wise subdirectories for timestamped logs.
+│   └── ...                 # Contains structured, dated log files for monitoring.
 ├── scripts/
-│   └── master.py           # The entry point script that orchestrates the ETL run, logging, and notifications.
+│   ├── master.py           # Orchestrator for the daily incremental run (entry point for Docker).
+│   └── backFill.py         # Orchestrator for running historical backfills for multiple symbols.
 ├── tests/
-│   └── test_api_pipeline.py  # Unit tests for the data fetching and processing logic.
+│   └── test_api_pipeline.py # Unit tests for the incremental data fetching logic.
 └── utils/
-    ├── fetch_last_cdc.py   # Utility to safely read the last CDC timestamp.
+    ├── fetch_last_cdc.py   # Utility to read the last CDC timestamp from the JSON file.
     └── send_email.py       # Utility to send email notifications.
 ```
-
-## Testing
-
-To run the unit tests for the API pipeline logic, execute the following command while the services are running:
-
-```bash
-docker-compose exec etl python -m unittest tests/test_api_pipeline.py
-```
-
-## Production-Grade Practices Applied
-
-This project emphasizes clean, maintainable, and robust code by applying several production-grade practices:
-
-### Modularity and Single Responsibility
-
-Our code is broken into small, single-purpose functions and modules, following the principle that a function should do one thing and do it well. This approach enhances testability, debugging, and code reuse, as seen in the `utils/` directory for shared functionalities.
-
-### Robust Error Handling
-
-Our application is designed to anticipate and gracefully handle unexpected issues that arise in real-world scenarios, such as network failures or API changes.
-
-**Key Practices:**
-
-1.  **Specific Exceptions:** We catch specific exceptions (e.g., `FileNotFoundError`, database-specific errors) to precisely identify and handle different failure types.
-2.  **Idempotency:** Operations are designed to be idempotent, meaning running them multiple times yields the same result as running them once. This prevents issues like duplicate entries if data is processed accidentally more than once.
-3.  **Retries with Exponential Backoff:** For transient errors, operations are retried with progressively longer delays between attempts, improving resilience against temporary outages.
-
-### Structured Logging
-
-Understanding the application's behavior in production is critical for debugging and monitoring. We implement comprehensive logging practices:
-
-**Key Practices:**
-
-1.  **The `logging` Module:** Python's built-in `logging` module is used for its powerful and flexible capabilities.
-2.  **Log Levels:** Different log levels (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) are utilized to indicate event severity, allowing for configurable log verbosity in different environments.
-3.  **Structured Logging:** Log messages are generated in a machine-readable format (e.g., JSON), facilitating easier searching, filtering, and analysis with modern logging tools.
