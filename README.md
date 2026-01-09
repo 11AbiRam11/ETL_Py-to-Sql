@@ -2,6 +2,42 @@
 
 This project provides a robust, production-inspired ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. It features two main workflows: an automated, incremental daily pipeline and a manual historical backfill pipeline. The entire application is containerized using Docker for portability and ease of deployment.
 
+## 🌿 Branching Strategy
+
+| Branch | Data Provider | Status | Description |
+| :--- | :--- | :--- | :--- |
+| `yfinance-migration` | **yfinance** | **Active** | Primary development branch using `yfinance` for free intraday data. |
+| `alphavantage-legacy` | **AlphaVantage** | **Legacy** | Archived version. Requires a Premium API key for intraday functionality. |
+
+---
+
+# Project Status: API Transition Notice
+
+## ⚠️ Project Update: AlphaVantage Free Tier Changes
+This project is currently undergoing a major transition. Due to recent changes in the **AlphaVantage API** policy, intraday time-series data (interval-based fetching) has been moved to their premium tier. The free tier is now limited to daily aggregate data only.
+
+### The Problem
+The current architecture relies on granular time intervals to function. Without access to intraday data, the core logic of the application is restricted.
+
+---
+
+## Strategic Decision
+To keep this project functional and free to use, I have evaluated the following paths:
+
+| Option | Strategy | Decision |
+| :--- | :--- | :--- |
+| **1** | **Purchase Premium API** | **Rejected**: Security concerns regarding the payment gateway and high subscription costs. |
+| **2** | **Re-architecture** | **Rejected**: Limiting the project to "whole day" prices is inefficient and reduces the tool's utility. |
+| **3** | **Migrate to `yfinance`** | **Selected**: Using the `yfinance` library allows for free, interval-based data retrieval while maintaining our current database structure. |
+
+## Next Steps: Moving to `yfinance`
+The next phase of development will involve:
+1.  **Deprecating** the AlphaVantage API wrapper.
+2.  **Integrating** the `yfinance` Python library for data ingestion.
+3.  **Mapping** the new data objects to our existing database schema to ensure minimal downtime.
+
+---
+
 ## Key Features
 
 ### General
