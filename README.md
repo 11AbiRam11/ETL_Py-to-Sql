@@ -36,7 +36,6 @@ The next phase of development will involve:
 2.  **Integrating** the `yfinance` Python library for data ingestion.
 3.  **Mapping** the new data objects to our existing database schema to ensure minimal downtime.
 
----
 
 ## Key Features
 
