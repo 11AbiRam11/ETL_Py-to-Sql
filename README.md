@@ -2,7 +2,7 @@
 
 This project provides a robust, production-inspired ETL (Extract, Transform, Load) pipeline for fetching intraday stock data from the Alpha Vantage API and storing it in a PostgreSQL database. It features two main workflows: an automated, incremental daily pipeline and a manual historical backfill pipeline. The entire application is containerized using Docker for portability and ease of deployment.
 
-## 🌿 Branching Strategy
+## Branching Strategy
 
 | Branch | Data Provider | Status | Description |
 | :--- | :--- | :--- | :--- |
